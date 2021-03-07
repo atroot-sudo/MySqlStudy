@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Day01/Day01.iml" filepath="$PROJECT_DIR$/Day01/Day01.iml" />
+      <module fileurl="file://$PROJECT_DIR$/JDBCSyudy/JDBCSyudy.iml" filepath="$PROJECT_DIR$/JDBCSyudy/JDBCSyudy.iml" />
       <module fileurl="file://$PROJECT_DIR$/MySqlStudy.iml" filepath="$PROJECT_DIR$/MySqlStudy.iml" />
     </modules>
   </component>
