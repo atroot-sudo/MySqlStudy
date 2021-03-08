@@ -1,9 +1,5 @@
-package ConnectionsUtils;
-
-
-
+package JDBCUtils;
 import bean.Customer;
-
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.sql.*;
@@ -120,7 +116,7 @@ public class JDBCUtils {
         return 0;
     }
 
-    public static int updateData1(Connection conn,String sql, Object... args) {
+    public static int updateData1(Connection conn, String sql, Object... args) {
 
         PreparedStatement ps = null;
         try {
@@ -237,7 +233,7 @@ public class JDBCUtils {
                 }
                 return t;
             }
-        }  catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             //关闭资源
@@ -293,7 +289,7 @@ public class JDBCUtils {
                 list.add(t);
             }
             return list;
-        }  catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             //关闭资源

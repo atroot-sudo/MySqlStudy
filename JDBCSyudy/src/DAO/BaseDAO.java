@@ -1,8 +1,4 @@
-package ConnectionsUtils;
-
-
-
-import bean.Customer;
+package DAO;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -12,21 +8,35 @@ import java.util.List;
 import java.util.Properties;
 
 /**
- * className: connection<p>
- * description: 返回一个connection对象 和 实现关闭资源的操作
+ * Description: BaseDAO
  * @author theoldzheng@163.com  @ZYD
- * @create 2021.3.7 20:49
+ * @create 2021.3.8 18:25
  */
-@SuppressWarnings({"DuplicatedCode", "UnusedReturnValue", "unused"})
-public class JDBCUtils {
-    //对数据库连接操作的封装
-    @SuppressWarnings("DuplicatedCode")
+public abstract class BaseDAO<T> {
+    private Class<T> clazz = null;
+    /**
+    *Description //获取当前BaseDAO的子类继承的父类中的泛型
+    *@Param
+    *@return
+    */
+    /*{
+        Type genericSuperclass = this.getClass().getGenericSuperclass();
+        ParameterizedType parameterizedType = (ParameterizedType) genericSuperclass;
+        Type[] typeArguments = parameterizedType.getActualTypeArguments();//获取了父类的泛型参数
+        clazz = (Class<T>) typeArguments[0];//泛型的第一个参数
+    }*/
+
+    /**
+     * Description 用于获取数据库连接，返回一个Connection对象
+     * @return java.sql.Connection
+     * @Param []
+     */
     public static Connection getConnection() {
         Connection conn = null;
         try {
             //提供加载器，准备加载配置文件
 
-            ClassLoader classLoader = JDBCUtils.class.getClassLoader();
+            ClassLoader classLoader = BaseDAO.class.getClassLoader();
             InputStream resourceAsStream = classLoader.getResourceAsStream("jdbc.properties");
 
             //进行加载  注意：只会识别到当前的src目录下
@@ -46,10 +56,14 @@ public class JDBCUtils {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return conn;
     }
 
+    /**
+     * Description 用于关闭数据库连接
+     * @return void
+     * @Param [connection, statement]
+     */
     public static void closeConnection(Connection connection, Statement statement) {
         //关闭连接
         if (connection != null) {
@@ -68,6 +82,11 @@ public class JDBCUtils {
         }
     }
 
+    /**
+     * Description 用于关闭数据库连接的重载方法(带结果集)
+     * @return void
+     * @Param [connection, statement, resultSet]
+     */
     public static void closeConnection(Connection connection, Statement statement, ResultSet resultSet) {
         //关闭连接
         if (connection != null) {
@@ -93,13 +112,15 @@ public class JDBCUtils {
         }
     }
 
-    //实现增删改查操作的封装
-    //返回值，int 为0，则更改失败，其余责成功
-    public static int updateData(String sql, Object... args) {
-        Connection conn = null;
+    /**
+     * Description 实现对数据库的增删改的操作，升级版，需要传入连接Connection
+     * @return 返回int型参数，若返回0，修改失败，大于0，修改成功
+     * @Param
+     */
+    public static int updateData(Connection conn, String sql, Object... args) {
+
         PreparedStatement ps = null;
         try {
-            conn = JDBCUtils.getConnection();
             //预编译SQL语句
             ps = conn.prepareStatement(sql);
 
@@ -107,49 +128,26 @@ public class JDBCUtils {
             for (int i = 0; i < args.length; i++) { //要注意的是，这里的循环次数，由sql语句中的占位符决定，这里获取长度作为循环次数
                 ps.setObject(i + 1, args[i]); // 注意 +1，prepareIndex从1开始
             }
-
             //开始执行操作
             return ps.executeUpdate();
 
         } catch (Exception throwables) {
             throwables.printStackTrace();
         } finally {
-            //关闭资源
-            JDBCUtils.closeConnection(conn, ps);
+            BaseDAO.closeConnection(null, ps);
         }
         return 0;
     }
 
-    public static int updateData1(Connection conn,String sql, Object... args) {
-
+    /**
+     * Description 用于返回查询单额全部参数 考虑事务
+     * @return java.util.List<T>
+     * @Param [clazz, conn, sql, args]
+     */
+    public static <T> List<T> getForList(Class<T> clazz, Connection conn, String sql, Object... args) {
         PreparedStatement ps = null;
+        ResultSet rs = null;
         try {
-
-            //预编译SQL语句
-            ps = conn.prepareStatement(sql);
-
-            //填充占位符
-            for (int i = 0; i < args.length; i++) { //要注意的是，这里的循环次数，由sql语句中的占位符决定，这里获取长度作为循环次数
-                ps.setObject(i + 1, args[i]); // 注意 +1，prepareIndex从1开始
-            }
-
-            //开始执行操作
-            return ps.executeUpdate();
-
-        } catch (Exception throwables) {
-            throwables.printStackTrace();
-        }
-        return 0;
-    }
-
-    //针对当前已有表student的select查询（单条信息查询）
-    public static Customer searchInformation(String sql, Object... args) {
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet resultSet = null;
-        try {
-            //获取数据库连接
-            conn = JDBCUtils.getConnection();
             ps = conn.prepareStatement(sql);
             //进行占位符填充
             for (int i = 0; i < args.length; i++) {
@@ -157,125 +155,19 @@ public class JDBCUtils {
             }
 
             //执行并获取结果集
-            resultSet = ps.executeQuery();
+            rs = ps.executeQuery();
             //获取结果集的元数据
-            ResultSetMetaData metaData = resultSet.getMetaData();
-
-            //获取列数
-            int columnCount = metaData.getColumnCount();
-
-            Customer customer = new Customer();
-            if (resultSet.next()) {
-                for (int i = 0; i < columnCount; i++) {
-                    //获取列值
-                    Object columnValue = resultSet.getObject(i + 1);
-                    //获取列名，准备进行对应
-                    //获取列名的常规调用方法 resultSet.getColumnName()
-                    //为了解决某些情况下，列名不匹配的情况，需要获取列的别名 getColumnLabel()，在没有别名的时候也会获得列名
-                    //String columnName = metaData.getColumnName(i + 1);
-                    String columnName = metaData.getColumnLabel(i + 1);
-                    //通过反射来获取对应的属性进行设置赋值
-                    Field field = Customer.class.getDeclaredField(columnName);
-
-                    //进行设置属性
-                    field.setAccessible(true);
-                    field.set(customer, columnValue);
-
-                }
-                return customer;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            //关闭资源
-            JDBCUtils.closeConnection(conn, ps, resultSet);
-        }
-
-
-        return null;
-    }
-
-    //通用的查询操作
-    public static <T> T searchInformation(Class<T> clazz, String sql, Object... args) {
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet resultSet = null;
-        try {
-            //获取数据库连接
-            conn = JDBCUtils.getConnection();
-            ps = conn.prepareStatement(sql);
-            //进行占位符填充
-            for (int i = 0; i < args.length; i++) {
-                ps.setObject(i + 1, args[i]);
-            }
-
-            //执行并获取结果集
-            resultSet = ps.executeQuery();
-            //获取结果集的元数据
-            ResultSetMetaData metaData = resultSet.getMetaData();
-
-            //获取列数
-            int columnCount = metaData.getColumnCount();
-
-            T t = clazz.newInstance();
-            if (resultSet.next()) {
-                for (int i = 0; i < columnCount; i++) {
-                    //获取列值
-                    Object columnValue = resultSet.getObject(i + 1);
-                    //获取列名，准备进行对应
-                    //获取列名的常规调用方法 resultSet.getColumnName()
-                    //为了解决某些情况下，列名不匹配的情况，需要获取列的别名 getColumnLabel()，在没有别名的时候也会获得列名
-                    //String columnName = metaData.getColumnName(i + 1);
-                    String columnName = metaData.getColumnLabel(i + 1);
-                    //通过反射来获取对应的属性进行设置赋值
-                    Field field = clazz.getDeclaredField(columnName);
-
-                    //进行设置属性
-                    field.setAccessible(true);
-                    field.set(t, columnValue);
-
-                }
-                return t;
-            }
-        }  catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            //关闭资源
-            JDBCUtils.closeConnection(conn, ps, resultSet);
-        }
-
-
-        return null;
-    }
-
-    //声明通用的查询的泛型方法
-    public static <T> List<T> getForList(Class<T> clazz, String sql, Object... args) {
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet resultSet = null;
-        try {
-            //获取数据库连接
-            conn = JDBCUtils.getConnection();
-            ps = conn.prepareStatement(sql);
-            //进行占位符填充
-            for (int i = 0; i < args.length; i++) {
-                ps.setObject(i + 1, args[i]);
-            }
-
-            //执行并获取结果集
-            resultSet = ps.executeQuery();
-            //获取结果集的元数据
-            ResultSetMetaData metaData = resultSet.getMetaData();
+            ResultSetMetaData metaData = rs.getMetaData();
 
             //获取列数
             int columnCount = metaData.getColumnCount();
 
             ArrayList<T> list = new ArrayList<>();
-            while (resultSet.next()) {
+            while (rs.next()) {
                 T t = clazz.newInstance();
                 for (int i = 0; i < columnCount; i++) {
                     //获取列值
-                    Object columnValue = resultSet.getObject(i + 1);
+                    Object columnValue = rs.getObject(i + 1);
                     //获取列名，准备进行对应
                     //获取列名的常规调用方法 resultSet.getColumnName()
                     //为了解决某些情况下，列名不匹配的情况，需要获取列的别名 getColumnLabel()，在没有别名的时候也会获得列名
@@ -293,12 +185,92 @@ public class JDBCUtils {
                 list.add(t);
             }
             return list;
-        }  catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             //关闭资源
-            JDBCUtils.closeConnection(conn, ps, resultSet);
+            BaseDAO.closeConnection(null, ps, rs);
         }
+        return null;
+    }
+
+    /**
+     * Description 通用的查询操作,实现对表数据的查询，返回一条数据结果
+     * @return T
+     * @Param [clazz, conn, sql, args]
+     */
+    public static <T> T searchInformation(Class<T> clazz, Connection conn, String sql, Object... args) {
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            ps = conn.prepareStatement(sql);
+            //进行占位符填充
+            for (int i = 0; i < args.length; i++) {
+                ps.setObject(i + 1, args[i]);
+            }
+
+            //执行并获取结果集
+            rs = ps.executeQuery();
+            //获取结果集的元数据
+            ResultSetMetaData metaData = rs.getMetaData();
+            //获取列数
+            int columnCount = metaData.getColumnCount();
+
+            T t = clazz.newInstance();
+            if (rs.next()) {
+                for (int i = 0; i < columnCount; i++) {
+                    //获取列值
+                    Object columnValue = rs.getObject(i + 1);
+                    //获取列名，准备进行对应
+                    //获取列名的常规调用方法 rs.getColumnName()
+                    //为了解决某些情况下，列名不匹配的情况，需要获取列的别名 getColumnLabel()，在没有别名的时候也会获得列名
+                    //String columnName = metaData.getColumnName(i + 1);
+                    String columnName = metaData.getColumnLabel(i + 1);
+                    //通过反射来获取对应的属性进行设置赋值
+                    Field field = clazz.getDeclaredField(columnName);
+
+                    //进行设置属性
+                    field.setAccessible(true);
+                    field.set(t, columnValue);
+
+                }
+                return t;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            //关闭资源
+            BaseDAO.closeConnection(null, ps, rs);
+        }
+        return null;
+    }
+
+    /**
+     * Description 查询特殊值的通用方法
+     * @return E
+     * @Param [conn, sql, args]
+     */
+    public <E> E getValue(Connection conn, String sql, Object... args) {
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            ps = conn.prepareStatement(sql);
+            //填充占位符
+            for (int i = 0; i < args.length; i++) {
+                ps.setObject(i + 1, args[i]);
+            }
+
+            //执行操作 并返回一个结果集
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return (E) rs.getObject(1);
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        } finally {
+        }
+        BaseDAO.closeConnection(null, ps, rs);
+
         return null;
     }
 }
