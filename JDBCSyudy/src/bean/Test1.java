@@ -57,7 +57,7 @@ public class Test1 {
         LocalDate localDate = maxBirth.toLocalDate();
         System.out.println("最大生日为：" + localDate);
         Long count = customerDAO.getCount(conn);
-        System.out.println("记录条数：" + count);
+        System.out.println("记录条数为：" + count);
 
         try {
             conn.close();
