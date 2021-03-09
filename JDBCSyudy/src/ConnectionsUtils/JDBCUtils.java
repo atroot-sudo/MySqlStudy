@@ -1,9 +1,11 @@
 package ConnectionsUtils;
 
 
-
 import bean.Customer;
+import com.alibaba.druid.pool.DruidDataSourceFactory;
+import com.mchange.v2.c3p0.ComboPooledDataSource;
 
+import javax.sql.DataSource;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.sql.*;
@@ -19,8 +21,40 @@ import java.util.Properties;
  */
 @SuppressWarnings({"DuplicatedCode", "UnusedReturnValue", "unused"})
 public class JDBCUtils {
+    /**
+     * Description 使用数据库连接池提供一个Connection对象（基于c3p0）
+     * @Param []
+     * @return java.sql.Connection
+     */
+    private static ComboPooledDataSource cpds = new ComboPooledDataSource("helloc3p0");
+
     //对数据库连接操作的封装
     @SuppressWarnings("DuplicatedCode")
+    /**
+     *Description 基于阿里的Druid(德鲁伊)的数据库连接池的测试
+     *@Param []
+     *@return java.sql.Connection
+     */
+    public static Connection getConnection2() throws Exception {
+        Properties pros = new Properties();
+        ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
+        InputStream rs = systemClassLoader.getResourceAsStream("DruidConnection.properties");
+        pros.load(rs);
+
+        DataSource dataSource = DruidDataSourceFactory.createDataSource(pros);
+        Connection conn = dataSource.getConnection();
+        return conn;
+    }
+
+    public static Connection getConnection1() throws SQLException {
+
+        //获取数据库连接池
+        Connection connection = cpds.getConnection();
+        return connection;
+
+    }
+
+
     public static Connection getConnection() {
         Connection conn = null;
         try {
@@ -120,7 +154,7 @@ public class JDBCUtils {
         return 0;
     }
 
-    public static int updateData1(Connection conn,String sql, Object... args) {
+    public static int updateData1(Connection conn, String sql, Object... args) {
 
         PreparedStatement ps = null;
         try {
@@ -237,7 +271,7 @@ public class JDBCUtils {
                 }
                 return t;
             }
-        }  catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             //关闭资源
@@ -293,7 +327,7 @@ public class JDBCUtils {
                 list.add(t);
             }
             return list;
-        }  catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             //关闭资源

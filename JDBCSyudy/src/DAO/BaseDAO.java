@@ -2,6 +2,8 @@ package DAO;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,12 +21,12 @@ public abstract class BaseDAO<T> {
     *@Param
     *@return
     */
-    /*{
+    {
         Type genericSuperclass = this.getClass().getGenericSuperclass();
         ParameterizedType parameterizedType = (ParameterizedType) genericSuperclass;
         Type[] typeArguments = parameterizedType.getActualTypeArguments();//获取了父类的泛型参数
         clazz = (Class<T>) typeArguments[0];//泛型的第一个参数
-    }*/
+    }
 
     /**
      * Description 用于获取数据库连接，返回一个Connection对象
@@ -144,7 +146,7 @@ public abstract class BaseDAO<T> {
      * @return java.util.List<T>
      * @Param [clazz, conn, sql, args]
      */
-    public static <T> List<T> getForList(Class<T> clazz, Connection conn, String sql, Object... args) {
+    public   List<T> getForList(Connection conn, String sql, Object... args) {
         PreparedStatement ps = null;
         ResultSet rs = null;
         try {
@@ -199,7 +201,7 @@ public abstract class BaseDAO<T> {
      * @return T
      * @Param [clazz, conn, sql, args]
      */
-    public static <T> T searchInformation(Class<T> clazz, Connection conn, String sql, Object... args) {
+    public  <E> E searchInformation( Connection conn, String sql, Object... args) {
         PreparedStatement ps = null;
         ResultSet rs = null;
         try {
@@ -234,7 +236,7 @@ public abstract class BaseDAO<T> {
                     field.set(t, columnValue);
 
                 }
-                return t;
+                return (E) t;
             }
         } catch (Exception e) {
             e.printStackTrace();
